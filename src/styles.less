@@ -1,0 +1,21 @@
+/* You can add global styles to this file, and also import other style files */
+
+html, body { height: 100%; }
+body { margin: 0; font-family: Roboto, "Helvetica Neue", sans-serif; }
+app-root {
+    display: flex;
+    height: 100%;
+    flex-direction: column;
+    justify-content: stretch;
+}
+header h1 {
+    padding-left: 0.666rem;
+}
+.spacer {
+    flex: 1 1 auto;
+}
+/* fix [hidden] @see https://stackoverflow.com/questions/35578083/what-is-the-equivalent-of-ngshow-and-nghide-in-angular-2/35578093#35578093*/
+[hidden] { display: none !important;}
+button, a, input[type=submit], .cp {
+    cursor: pointer;
+}

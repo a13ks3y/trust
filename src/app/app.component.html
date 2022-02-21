@@ -1,0 +1,48 @@
+<header>
+  <mat-toolbar>
+    <button mat-icon-button (click)="toggleSideNav()" aria-label="Menu">
+      <mat-icon>menu</mat-icon>
+    </button>
+    <h1 class="cp" (click)="update()">The Trust Tree</h1>
+    <button mat-icon-button (click)="update()" aria-label="Refresh">
+      <mat-icon>refresh</mat-icon>
+    </button>
+    <span class="spacer"></span>
+    <button mat-icon-button (click)="update()" aria-label="Add bookmark">
+      <mat-icon>favorite</mat-icon>
+    </button>
+    <button mat-icon-button aria-label="Share (copy link)">
+      <mat-icon>share</mat-icon>
+    </button>
+  </mat-toolbar>
+</header>
+<main>
+  <mat-sidenav-container>
+    <mat-sidenav>
+      <button mat-button class="menu-button">
+        <mat-icon>home</mat-icon>
+        <span>Home</span>
+    </button>
+    <button mat-button class="menu-button">
+        <mat-icon>person</mat-icon>
+        <span>Profile</span>
+    </button>
+    <button mat-button class="menu-button">
+        <mat-icon>info</mat-icon>
+        <span>About</span>
+    </button>
+
+    <mat-divider></mat-divider>
+
+    <button mat-button class="menu-button">
+        <mat-icon>help</mat-icon>
+        <span>Help</span>
+    </button>
+    </mat-sidenav>
+    <mat-sidenav-content>
+        <div class="content mat-elevation-z8">
+          <router-outlet></router-outlet>
+        </div>
+    </mat-sidenav-content>
+  </mat-sidenav-container>
+</main>
