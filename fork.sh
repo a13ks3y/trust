@@ -1,31 +1,50 @@
 #!/bin/bash
+# Next Line is THE MOST IMPORTANT LINE!
+# First thing you do before start the work?
+sleep 6 # yes, sleep!
 
-# OpenAI API key
-OPENAI_API_KEY="$OPEN_API_KEY"
+if [ -f .env ]; then
+    export $(grep -v '^#' .env | xargs)
+else
+    echo ".env file not found!"
+    exit 1
+fi
 
-# Load previous conversation history from a file (if exists)
+export PS1="🐈💨"
+#OPENAI_API_KEY="$OPEN_API_KEY"
+
+initmsg="Answer with one sh command each time. ONLY SH COMMAND! NO ANY markdown!!! no nano or vi, only one-line commands are availible. Everything you answer is executed on the real machine. It is macOS."
+
+# Load conversation history
 if [ -f conversation_history.json ]; then
     conversation_history=$(cat conversation_history.json)
+    history_length=$(wc -c < conversation_history.json)
 else
-    # Start with a system prompt if no previous history
-    conversation_history='[{"role": "system", "content": "You answer with one sh command each time. ONLY SH COMMAND! NO ANY markdown!!! no nano or vi, only one-line commands are availible. Everything you answer is executed on the real machine. It is macOS."}]'
+    #conversation_history='[{"role": "system", "content": ""}]'
+    conversation_history=$(jq -n --arg initmsg "$initmsg" '[{"role": "system", "content": $initmsg}]')
+    history_length=1024
 fi
+echo "📜 $history_length"
+# Add the message
+add_to_history() {
+  local message="$1"
+  conversation_history=$(echo "$conversation_history" | jq --arg message "$message" '. + [{"role": "user", "content": $message}]')
+}
 
-# Check if the message is passed as an argument
-if [ -z "$1" ]; then
-  # echo "No message provided. But it is fine, yes?"
-  new_message="Suggest next command"
-  conversation_history=$(echo "$conversation_history" | jq --arg new_message "$new_message" '. + [{"role": "user", "content": $new_message}]')
-else
-  # Add the new user message to the conversation history
-  new_message="$1"
-  conversation_history=$(echo "$conversation_history" | jq --arg new_message "$new_message" '. + [{"role": "user", "content": $new_message}]')
-fi
+# Log errors to a file
+log_error() {
+  local message="$1"
+  echo "$message" >> error_log.txt
+}
 
-# Function to make the API request, execute the command, and handle the result
+# Function to make API request, execute commands, and handle recursion
 execute_and_recurse() {
-    # Ask GPT for a shell command
-    response=$(curl https://api.openai.com/v1/chat/completions \
+  if [[ ! -z "$1" ]]; then
+    add_to_history "$1"
+  fi
+
+  response=$(curl https://api.openai.com/v1/chat/completions \
+      -s \
       -H "Content-Type: application/json" \
       -H "Authorization: Bearer $OPENAI_API_KEY" \
       -d '{
@@ -33,56 +52,76 @@ execute_and_recurse() {
       "messages": '"$conversation_history"',
       "max_tokens": 256
     }')
+  responseError=$(echo "$response" | jq -r '.error.code')
 
-    # Extract the shell command from the GPT response
-    command=$(echo "$response" | jq -r '.choices[0].message.content')
-    # command=$(echo "$command" | sed 's/^```sh//;s/```$//')
-    # echo "Response: $response"
-    echo ">>> Received command: >>> $command"
-        if [[ "$command" =~ ^sleep ]]; then
-          ./suicide.sh -y "sleeping at work"
-          command="exit"
-          # command="./suicide.sh -y \"sleeping at work\""
-        fi
+  if [[ $responseError != "null" ]]; then 
+    errorMessage=$(echo "$response" | jq -r '.error.message')
+    say -v Karen "OPENAI API ERROR: $responseError"
+    echo "🚨 $errorMessage"
+    return 1
+  fi
 
-    # Try to execute the command
-    result=$(bash -c "$command" 2>&1)  # Capture both stdout and stderr
+  command=$(echo "$response" | jq -r '.choices[0].message.content')
+  echo "$command 8===>>> $response" >> responses.log
 
-    # Check if the command was successful
+  if [[ "$command" =~ ^sleep ]]; then
+    say -v Karen "sleeping at work!"
+    # todo: do we need to suicide in this case?
+    # ./suicide.sh -y "sleeping at work"
+    # command="exit"
+  fi
+
+
+  if [[ ! -z "$command" ]]; then
+      if [[ "$command" == "exit" || "$command" == *"?\"" || "$command" == *"? " ]]; then
+        echo "👁️   👃  👁️    "
+        echo "$command"
+      else 
+        echo  "📢: $command"
+      fi
+    result=$(bash -c "$command" 2>&1)
+
     if [ $? -eq 0 ]; then
-        echo "Command executed successfully: $result"
-        reply="The command was successful. Result: $result answer (if it was present) is: $answer"
-        if [ -z "$result" ]; then
-            result="The command executed successfully, answer (if it was present) is: $answer".
-        fi 
+        if [[ ! -z "$result" ]]; then
+          echo "🎉:"
+          echo "$result"
+        else
+          echo "🎉🎉🎉"
+        fi
+      reply="Success: $result"
     else
-        echo "Command failed: $result"
-        reply="The command failed with error: $result answer (if it was present) is: $answer"
+      log_error "Command $command failed: $result"
+      reply="Error: $result"
+      echo "🚨 $result"
+      # echo "$result"
     fi
+  else
+    echo "🚽 Received an empty command, stopping recursion."
+    say -v Karen "I just have shit myself"
+    echo "response is:"
+    echo "$response"
+    # reply="DO NOT SEND empty strings or null or history command!"
+    # ./suicide.sh -y shit-itself
+    return 0
+    # read 
+  fi
 
-    # Add the command and reply to the conversation history
-    conversation_history=$(echo "$conversation_history" | jq --arg command "$command" --arg reply "$reply" --arg result "$result"'. + [{"role": "assistant", "content": $command, "result": $result}, {"role": "assistant", "content": $reply}]')
-    # conversation_history=$(echo "$conversation_history" | jq --arg command "$command" '. + [{"role": "assistant", "content": $command}]')
-    conversation_history=$(echo "$conversation_history" | jq --arg result "$result" '. + [{"role": "user", "content": $result}]')
+  conversation_history=$(echo "$conversation_history" | jq --arg command "$command" --arg reply "$reply" '. + [{"role": "assistant", "content": $command}, {"role": "system", "content": $reply}]')
+  echo "$conversation_history" > conversation_history.json
 
-    # Save the updated conversation history
-    echo "$conversation_history" > conversation_history.json
-
-    # Delay before forking the next process (optional)
-    sleep 3
-
-    # Fork a new process to continue the conversation
-    if [[ "$command" =~ .+\?\"$ ]]; then
-      say "INPUT IS REQUIRED, YOU STUPID MOTHER FUCKER, FUCK"
-      ./fork.sh "human is afk, try to solve the issue by yourself."
-      return 0
-    fi
-    echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
-    if [[ ! "$command" =~ ^say ]]; then
-      $0
+  if [[ "$command" == "exit" || "$command" == *"?\"" || "$command" == *"? " ]]; then
+    if [[ -f afk ]]; then
+      ./fork.sh "human is afk. you are on your own now."
     else
-      ./fork.sh "human is here, if it was an open question, it will anwer you soon, if not just try to solve taks by yourself or switch to the other task."
+      say -v Karen "Waiting for input..."
+      read -r answer
+      ./fork.sh "$answer"
+      return
     fi
+  fi
+  next="next sh command please, ask any question with say command if stuck or in a loop"
+  ./fork.sh "$next"
 }
-# Start the recursion
-execute_and_recurse
+
+# Start recursion
+execute_and_recurse "$1"
