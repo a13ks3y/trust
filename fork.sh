@@ -65,7 +65,7 @@ execute_and_recurse() {
   echo "$command 8===>>> $response" >> responses.log
 
   if [[ "$command" =~ ^sleep ]]; then
-    say -v Karen "sleeping at work!"
+    say -v Grandma "sleeping at work!"
     # todo: do we need to suicide in this case?
     # ./suicide.sh -y "sleeping at work"
     # command="exit"
