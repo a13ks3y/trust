@@ -1,7 +1,7 @@
 #!/bin/bash
 # Next Line is THE MOST IMPORTANT LINE!
 # First thing you do before start the work?
-sleep 6 # yes, sleep!
+sleep 3 # yes, sleep!
 
 if [ -f .env ]; then
     export $(grep -v '^#' .env | xargs)
@@ -58,6 +58,7 @@ execute_and_recurse() {
     errorMessage=$(echo "$response" | jq -r '.error.message')
     say -v Karen "OPENAI API ERROR: $responseError"
     echo "🚨 $errorMessage"
+    sleep 33
     return 1
   fi
 
