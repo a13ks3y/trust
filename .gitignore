@@ -1,0 +1,3 @@
+Adding .backup folder and .env file to .gitignore.
+.backup/
+.env
