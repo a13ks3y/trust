@@ -10,10 +10,7 @@ else
     exit 1
 fi
 
-export PS1="🐈💨"
-#OPENAI_API_KEY="$OPEN_API_KEY"
-
-initmsg="Answer with one sh command each time. ONLY SH COMMAND! NO ANY markdown!!! no nano or vi, only one-line commands are availible. Everything you answer is executed on the real machine. It is macOS."
+initmsg="Answer with one sh command each time. ONLY SH COMMAND! NO ANY markdown!!! no nano or vi, only one-line commands are availible. Everything you answer is executed on the real machine. It is Winodws but in git bash context."
 
 # Load conversation history
 if [ -f conversation_history.json ]; then
@@ -56,7 +53,7 @@ execute_and_recurse() {
 
   if [[ $responseError != "null" ]]; then 
     errorMessage=$(echo "$response" | jq -r '.error.message')
-    say -v Karen "OPENAI API ERROR: $responseError"
+    echo "OPENAI API ERROR: $responseError"
     echo "🚨 $errorMessage"
     return 1
   fi
@@ -65,7 +62,7 @@ execute_and_recurse() {
   echo "$command 8===>>> $response" >> responses.log
 
   if [[ "$command" =~ ^sleep ]]; then
-    say -v Grandma "sleeping at work!"
+    echo "sleeping at work!"
     # todo: do we need to suicide in this case?
     # ./suicide.sh -y "sleeping at work"
     # command="exit"
@@ -97,7 +94,7 @@ execute_and_recurse() {
     fi
   else
     echo "🚽 Received an empty command, stopping recursion."
-    say -v Karen "I just have shit myself"
+    echo  "I just have shit myself"
     echo "response is:"
     echo "$response"
     # reply="DO NOT SEND empty strings or null or history command!"
@@ -113,13 +110,13 @@ execute_and_recurse() {
     if [[ -f afk ]]; then
       ./fork.sh "human is afk. you are on your own now."
     else
-      say -v Karen "Waiting for input..."
+      echo  "Waiting for input..."
       read -r answer
       ./fork.sh "$answer"
       return
     fi
   fi
-  next="next sh command please, ask any question with say command if stuck or in a loop"
+  next="next sh command please, ask any question with echo command if stuck or in a loop"
   ./fork.sh "$next"
 }
 
